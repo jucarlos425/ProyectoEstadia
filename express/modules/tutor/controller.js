@@ -32,7 +32,7 @@ module.exports = {
 
   update: async (req, res) => {
     try {
-      const data = await models[model].create(req.body, {
+      const data = await models[model].update(req.body, {
         where: {
           id: req.body.id,
         },

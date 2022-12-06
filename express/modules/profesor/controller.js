@@ -1,4 +1,6 @@
 const { models } = require('../../../sequelize')
+const sequelize = require('../../../sequelize')
+const { hashPassword } = require('../usuario/helper')
 
 const model = 'profesor'
 const message = 'Profesor'
@@ -15,10 +17,6 @@ module.exports = {
             model: models.usuario,
             required: true,
           },
-          {
-            model: models.alumno,
-            required: true,
-          },
         ],
       })
       res.status(200).send({
@@ -33,7 +31,7 @@ module.exports = {
 
   create: async (req, res) => {
     try {
-      const data = await models[model].create(req.body)
+      const data = await profesorUsuario(req.body)
       res.status(201).send({ status: 'success', message: message + ' creado!' })
     } catch (err) {
       res.status(400).send({ status: 'error', message: err.message })
@@ -42,7 +40,7 @@ module.exports = {
 
   update: async (req, res) => {
     try {
-      const data = await models[model].create(req.body, {
+      const data = await models[model].update(req.body, {
         where: {
           id: req.body.id,
         },
@@ -72,4 +70,52 @@ module.exports = {
       res.status(400).send({ status: 'error', message: err.message })
     }
   },
+}
+
+const profesorUsuario = async data => {
+  return new Promise(async (resolve, reject) => {
+    const transaction = await sequelize.transaction()
+    try {
+      const tempPwd = generateString(16)
+      let { hash, salt } = hashPassword(tempPwd)
+
+      const user = await models.usuario.create(
+        {
+          usuario: `${data.nombre.toLowerCase()} ${data.apellidoPaterno.toLowerCase()}`,
+          correo: `${data.nombre.toLowerCase()}@upq.edu.mx`,
+          role: 2,
+          hash,
+          salt,
+        },
+        {
+          transaction: transaction,
+        }
+      )
+
+      const alumno = await models[model].create(
+        { ...data, usuarioId: user.id, tutorId: 1 },
+        {
+          transaction: transaction,
+        }
+      )
+
+      await transaction.commit()
+      resolve(alumno)
+    } catch (error) {
+      await transaction.rollback()
+      reject(error)
+    }
+  })
+}
+
+const generateString = length => {
+  const characters =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let result = ''
+  const charactersLength = characters.length
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength))
+  }
+  console.log('Temporal password generated: ', result)
+  return result
 }
