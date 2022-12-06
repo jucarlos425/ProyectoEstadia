@@ -30,7 +30,7 @@ module.exports = {
           level = 2
           break
 
-        case 3:
+        case 1:
           profile = await models.profesor.findOne({
             where: {
               id: data.usuarioId,
@@ -56,6 +56,7 @@ module.exports = {
         }),
       })
     } catch (err) {
+      console.log('err', err)
       res.status(400).send({ status: 'error', message: 'Acceso denegado' })
     }
   },
